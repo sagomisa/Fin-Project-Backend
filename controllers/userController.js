@@ -391,6 +391,94 @@ const sendAutomatedEmail = asyncHandler(async (req, res) => {
   }
 });
 
+// Forgot Password
+const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    res.status(404);
+    throw new Error("No user with this email");
+  }
+
+  // Delete Token if it exists in DB
+  let token = await Token.findOne({ userId: user._id });
+  if (token) {
+    await token.deleteOne();
+  }
+
+  //   Create Verification Token and Save
+  const resetToken = crypto.randomBytes(32).toString("hex") + user._id;
+  console.log(resetToken);
+
+  // Hash token and save
+  const hashedToken = hashToken(resetToken);
+  await new Token({
+    userId: user._id,
+    pwResetToken: hashedToken,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + 60 * (60 * 1000), // 60mins
+  }).save();
+
+  // Construct Reset URL
+  const resetUrl = `${process.env.FRONTEND_URL}/resetPassword/${resetToken}`;
+
+  // Send Email
+  const subject = "Password Reset Request - FIN Investments Inc.";
+  const send_to = user.email;
+  const sent_from = process.env.EMAIL_USER;
+  const reply_to = "noreply@fininvestmentsinc.com";
+  const template = "forgotPassword";
+  const name = user.name;
+  const link = resetUrl;
+
+  try {
+    await sendEmail(
+      subject,
+      send_to,
+      sent_from,
+      reply_to,
+      template,
+      name,
+      link
+    );
+    res.status(200).json({ message: "Password Reset Email Sent" });
+  } catch (error) {
+    res.status(500);
+    throw new Error("Email not sent, please try again");
+  }
+});
+
+// Reset Password
+const resetPassword = asyncHandler(async (req, res) => {
+  const { resetToken } = req.params;
+  const { password } = req.body;
+  console.log(resetToken);
+  console.log(password);
+
+  const hashedToken = hashToken(resetToken);
+
+  const userToken = await Token.findOne({
+    pwResetToken: hashedToken,
+    expiresAt: { $gt: Date.now() },
+  });
+
+  if (!userToken) {
+    res.status(404);
+    throw new Error("Invalid or Expired Token");
+  }
+
+  // Find User
+  const user = await User.findOne({ _id: userToken.userId });
+
+  // Now Reset password
+  user.password = password;
+  await user.save();
+
+  res.status(200).json({ message: "Password Reset Successful, please login" });
+});
+
 module.exports = {
   registerUser,
   loginUser,
@@ -404,4 +492,6 @@ module.exports = {
   sendAutomatedEmail,
   sendVerificationEmail,
   verifyUser,
+  forgotPassword,
+  resetPassword
 };
