@@ -12,6 +12,8 @@ const {
   loginStatus,
   upgradeUser,
   sendAutomatedEmail,
+  sendVerificationEmail,
+  verifyUser,
 } = require("../controllers/userController");
 
 router.post("/register", registerUser);
@@ -25,5 +27,8 @@ router.get("/getUsers", protect, adminOnly, getUsers);
 router.get("/loginStatus", loginStatus);
 router.post("/upgradeUser", protect, adminOnly, upgradeUser);
 router.post("/sendAutomatedEmail", protect, sendAutomatedEmail);
+
+router.post("/sendVerificationEmail", protect, sendVerificationEmail);
+router.patch("/verifyUser/:verificationToken", protect, verifyUser);
 
 module.exports = router;
