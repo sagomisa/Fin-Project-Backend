@@ -4,13 +4,13 @@ const jwt = require("jsonwebtoken");
 
 const protect = asyncHandler(async (req, res, next) => {
   try {
-    // const token = req.cookies.token;
-    const token =
-      req.body.token || req.query.token || req.headers["authorization"];
-    
+    const token = req.cookies.token;
+    // const token =
+    //   req.body.token || req.query.token || req.headers["authorization"];
+
     if (!token) {
       res.status(401);
-      throw new Error("Not authorized, please login");
+      throw new Error("Not authorized, login to continue");
     }
 
     // Verify token
@@ -26,7 +26,6 @@ const protect = asyncHandler(async (req, res, next) => {
       res.status(400);
       throw new Error("User suspended, please contact support");
     }
-
     req.user = user;
     next();
   } catch (error) {
@@ -36,6 +35,7 @@ const protect = asyncHandler(async (req, res, next) => {
 });
 
 const adminOnly = asyncHandler(async (req, res, next) => {
+  console.log(req.user.role);
   if (req.user && req.user.role === "admin") {
     next();
   } else {

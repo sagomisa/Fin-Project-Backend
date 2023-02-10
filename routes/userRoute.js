@@ -16,7 +16,7 @@ const {
   verifyUser,
   forgotPassword,
   resetPassword,
-  changePassword
+  changePassword,
 } = require("../controllers/userController");
 
 router.post("/register", registerUser);

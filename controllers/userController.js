@@ -32,15 +32,15 @@ const registerUser = asyncHandler(async (req, res) => {
   }
 
   // Get UserAgent
-  const ua = parser(req.headers["user-agent"]);
-  const userAgent = [ua.ua];
+  // const ua = parser(req.headers["user-agent"]);
+  // const userAgent = [ua.ua];
 
   //   Create new user
   const user = await User.create({
     name,
     email,
     password,
-    userAgent,
+    // userAgent,
   });
 
   // Generate Token
@@ -318,9 +318,9 @@ const getUsers = asyncHandler(async (req, res) => {
 
 //Get Login Status
 const loginStatus = asyncHandler(async (req, res) => {
-  // const token = req.cookies.token;
-  const token =
-    req.body.token || req.query.token || req.headers["authorization"];
+  const token = req.cookies.token;
+  // const token =
+  //   req.body.token || req.query.token || req.headers["authorization"];
   if (!token) {
     return res.json(false);
   }
