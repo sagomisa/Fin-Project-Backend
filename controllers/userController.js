@@ -319,7 +319,6 @@ const getUsers = asyncHandler(async (req, res) => {
 //Get Login Status
 const loginStatus = asyncHandler(async (req, res) => {
   const token = req.cookies.token;
-  console.log(`token>>>>>>>>>>>> ${token}`);
   // const token =
   //   req.body.token || req.query.token || req.headers["authorization"];
   if (!token) {

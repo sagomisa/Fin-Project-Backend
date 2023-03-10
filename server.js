@@ -5,6 +5,7 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
 const userRoute = require("./routes/userRoute");
+const loanRoute = require("./routes/loanRoute");
 const errorHandler = require("./middleware/errorMiddleware");
 
 const app = express();
@@ -17,13 +18,18 @@ app.use(bodyParser.json());
 
 app.use(
   cors({
-    origin: ["http://localhost:3000", "https://fininvestmentsinc.vercel.app"],
+    origin: [
+      "http://localhost:3000",
+      "https://fininvestmentsinc.vercel.app",
+      "https://www.fininvestmentsinc.com",
+    ],
     credentials: true,
   })
 );
 
 // Routes
 app.use("/api/users", userRoute);
+app.use("/api/loans", loanRoute);
 
 app.get("/", (req, res) => {
   res.send("Home Page");
