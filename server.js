@@ -6,6 +6,7 @@ const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
 const userRoute = require("./routes/userRoute");
 const loanRoute = require("./routes/loanRoute");
+const eventRoute = require("./routes/eventRoute");
 const errorHandler = require("./middleware/errorMiddleware");
 
 const app = express();
@@ -30,6 +31,7 @@ app.use(
 // Routes
 app.use("/api/users", userRoute);
 app.use("/api/loans", loanRoute);
+app.use("/api/events", eventRoute);
 
 app.get("/", (req, res) => {
   res.send("Home Page");
