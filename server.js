@@ -7,6 +7,7 @@ const cookieParser = require("cookie-parser");
 const userRoute = require("./routes/userRoute");
 const loanRoute = require("./routes/loanRoute");
 const eventRoute = require("./routes/eventRoute");
+const constantRoute = require("./routes/constantRoute");
 const errorHandler = require("./middleware/errorMiddleware");
 
 const app = express();
@@ -32,6 +33,7 @@ app.use(
 app.use("/api/users", userRoute);
 app.use("/api/loans", loanRoute);
 app.use("/api/events", eventRoute);
+app.use("/api/constants", constantRoute);
 
 app.get("/", (req, res) => {
   res.send("Home Page");
