@@ -13,8 +13,8 @@ const {
 } = require("../controllers/eventController");
 
 router.post("/createEvent", createEvent);
-router.get("/getAllEvents", protect, getAllEvents);
-router.get("/getEventById/:id", protect, getEventById);
+router.get("/getAllEvents", getAllEvents);
+router.get("/getEventById/:id", getEventById);
 router.put("/updateEvent/:id", updateEvent);
 router.delete("/deleteEvent/:id", deleteEvent);
 

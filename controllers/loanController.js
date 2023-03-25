@@ -10,6 +10,9 @@ const createLoan = async (req, res) => {
     // Check if user has an existing loan
     const existingLoan = await Loan.findOne({ user: id });
 
+    /* Logic
+    Check number of days. if numberOfDays < 60, 
+    */ 
     if (existingLoan) {
       return res.status(400).json({ message: "You already have a loan" });
     }
