@@ -4,37 +4,46 @@ const sendEmail = require("../utils/sendEmail");
 
 const createLoan = async (req, res) => {
   try {
+    console.log(`req>>>>>>>>>>${JSON.stringify(req.body)}`);
     const { id, amount } = req.body;
+    console.log(`id>>>>>${req.body.id}`);
+    console.log(`amount>>>>>${req.body.amount}`);
     const user = await User.findById(id);
 
     // Check if user has an existing loan
     const existingLoan = await Loan.findOne({ user: id });
-
+    console.log(`existingLoan>>>>${existingLoan}`);
     /* Logic
     Check number of days. if numberOfDays < 60, 
-    */ 
+    */
+    // if (existingLoan) {
+    //   console.log(`test>>>>>`);
+    //   return res.status(400).json({ message: "You already have a loan" });
+    // }
+
     if (existingLoan) {
-      return res.status(400).json({ message: "You already have a loan" });
+      console.log("existingLoan called --->", existingLoan);
+      return res.status(200).json({ message: "You already have a loan" });
     }
-     
+
     const loan = new Loan({
       user,
       amount,
     });
 
     // Send email to user.
-  
-    const subject = "New Loan Application - FIN Investments Inc.";
-    const send_to = user.email;
-    const sent_from = process.env.EMAIL_USER;
-    const reply_to = "";
-    const template = "newLoan";
-    const name = user.name;
 
-    await sendEmail(subject, send_to, sent_from, reply_to, template, name);
+    // const subject = "New Loan Application - FIN Investments Inc.";
+    // const send_to = user.email;
+    // const sent_from = process.env.EMAIL_USER;
+    // const reply_to = "";
+    // const template = "newLoan";
+    // const name = user.name;
+
+    // await sendEmail(subject, send_to, sent_from, reply_to, template, name);
 
     const newLoan = await loan.save();
-
+    console.log(`newLoan>>>>>>>${newLoan}`);
     res.status(201).json(newLoan);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -54,7 +63,7 @@ const getAllLoans = async (req, res) => {
 // Find a single loan with a loanId
 const getLoanById = async (req, res) => {
   try {
-    const { id } = req.params; 
+    const { id } = req.params;
     const loan = await Loan.findById(id);
     res.status(200).json(loan);
   } catch (error) {
@@ -92,10 +101,32 @@ const deleteLoan = async (req, res) => {
   }
 };
 
+// Change Loan Status
+const changeLoanStatus = async (req, res) => {
+  console.log(`reqbody>>>>${req.body}`);
+
+  // const { status, id, amount } = req.body;
+
+  // const loan = await Loan.findById(id);
+
+  // if (!loan) {
+  //   res.status(404);
+  //   throw new Error("User not found");
+  // }
+
+  // loan.status = role;
+  // await loan.save();
+
+  // res.status(200).json({
+  //   message: `Loan status updated to ${status}`,
+  // });
+};
+
 module.exports = {
   createLoan,
   getAllLoans,
   getLoanById,
   updateLoan,
   deleteLoan,
+  changeLoanStatus,
 };

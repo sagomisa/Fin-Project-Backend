@@ -500,11 +500,13 @@ const changePassword = asyncHandler(async (req, res) => {
   // Save new password
   if (user && passwordIsCorrect) {
     user.password = password;
-    await user.save();
+    const updatedUser = await user.save();
+    console.log(`updated user?????${updatedUser}`);
 
-    res
-      .status(200)
-      .json({ message: "Password change successful, please re-login" });
+    res.status(200).json({
+      message: "Password change successful, please re-login",
+      updatedUser,
+    });
   } else {
     res.status(400);
     throw new Error("Old password is incorrect");
