@@ -1,6 +1,7 @@
 const User = require("../models/userModel");
 const Loan = require("../models/loanModel");
 const sendEmail = require("../utils/sendEmail");
+const Constant = require("../models/constantsModel");
 
 const createLoan = async (req, res) => {
   try {
@@ -103,23 +104,60 @@ const deleteLoan = async (req, res) => {
 
 // Change Loan Status
 const changeLoanStatus = async (req, res) => {
-  console.log(`reqbody>>>>${req.body}`);
-
-  // const { status, id, amount } = req.body;
-
-  // const loan = await Loan.findById(id);
-
-  // if (!loan) {
-  //   res.status(404);
-  //   throw new Error("User not found");
-  // }
-
-  // loan.status = role;
-  // await loan.save();
-
-  // res.status(200).json({
-  //   message: `Loan status updated to ${status}`,
-  // });
+  try {
+    console.log(`"REQ BODY>>>>${JSON.stringify(req.body)}`);
+    const { userId, loanId, loanAmount, loanStatus } = req.body;
+    const loan = await Loan.findById(loanId);
+    console.log("LOANNNNNN >>>>>>>>>", JSON.stringify(loan));
+    if (loanStatus === "Approved") {
+      const totalLoanProvidedByCompany = await Constant.find({
+        key: "totalDisbursementAmount",
+      });
+      const totalLoanOfCompany = totalLoanProvidedByCompany[0]?.value;
+      if (totalLoanOfCompany >= loanAmount) {
+        if (loan) {
+          loan.status = loanStatus;
+          const filter = { id: loanId };
+          const updateDoc = {
+            $set: {
+              status: loanStatus,
+            },
+          };
+          await Loan.updateOne(filter, updateDoc);
+          const newRemainingCompanyLoan = totalLoanOfCompany - loanAmount;
+          // update Constant value
+          await Constant.findOneAndUpdate({
+            key: "totalDisbursementAmount",
+            value: newRemainingCompanyLoan.toString(),
+          });
+          return res
+            .status(200)
+            .json({ message: "Loan approved successfully." });
+        }
+      } else {
+        return res
+          .status(400)
+          .json({
+            message: "Cannot process the request with the given amount.",
+          });
+      }
+    } else {
+      if (loan) {
+        loan.status = loanStatus;
+        const filter = { id: loanId };
+        const updateDoc = {
+          $set: {
+            status: loanStatus,
+          },
+        };
+        await Loan.updateOne(filter, updateDoc);
+        let message = "Loan $loanStatus successfully.";
+        return res.status(200).json({ message: message });
+      }
+    }
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
 };
 
 module.exports = {
