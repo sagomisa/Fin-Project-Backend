@@ -34,15 +34,24 @@ const createLoan = async (req, res) => {
 
     // Send email to user.
 
-    // const subject = "New Loan Application - FIN Investments Inc.";
-    // const send_to = user.email;
-    // const sent_from = process.env.EMAIL_USER;
-    // const reply_to = "";
-    // const template = "newLoan";
-    // const name = user.name;
+    const subject = "New Loan Application - FIN Investments Inc.";
+    const send_to = user.email;
+    const sent_from = process.env.EMAIL_USER;
+    const reply_to = "";
+    const template = "newLoan";
+    const name = user.name;
 
-    // await sendEmail(subject, send_to, sent_from, reply_to, template, name);
+    await sendEmail(subject, send_to, sent_from, reply_to, template, name);
 
+    // Send email to admin.
+
+    const subject1 = "New Loan Application - FIN Investments Inc.";
+    const send_to1 = "fininvestmentsinc@gmail.com";
+    const sent_from1 = process.env.EMAIL_USER;
+    const reply_to1 = "";
+    const template1 = "newLoanForAdmin";
+
+    await sendEmail(subject1, send_to1, sent_from1, reply_to1, template1);
     const newLoan = await loan.save();
     console.log(`newLoan>>>>>>>${newLoan}`);
     res.status(201).json(newLoan);
@@ -135,11 +144,9 @@ const changeLoanStatus = async (req, res) => {
             .json({ message: "Loan approved successfully." });
         }
       } else {
-        return res
-          .status(400)
-          .json({
-            message: "Cannot process the request with the given amount.",
-          });
+        return res.status(400).json({
+          message: "Cannot process the request with the given amount.",
+        });
       }
     } else {
       if (loan) {
