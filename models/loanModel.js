@@ -16,6 +16,11 @@ const loanSchema = mongoose.Schema(
       required: true,
       default: "pending",
     },
+    remarks: {
+      type: String,
+      required: false,
+      default: "",
+    },
   },
   {
     timestamps: true,

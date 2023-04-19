@@ -2,6 +2,7 @@ const User = require("../models/userModel");
 const Loan = require("../models/loanModel");
 const sendEmail = require("../utils/sendEmail");
 const Constant = require("../models/constantsModel");
+const ObjectId = require("mongodb").ObjectID;
 
 const createLoan = async (req, res) => {
   try {
@@ -14,13 +15,6 @@ const createLoan = async (req, res) => {
     // Check if user has an existing loan
     const existingLoan = await Loan.findOne({ user: id });
     console.log(`existingLoan>>>>${existingLoan}`);
-    /* Logic
-    Check number of days. if numberOfDays < 60, 
-    */
-    // if (existingLoan) {
-    //   console.log(`test>>>>>`);
-    //   return res.status(400).json({ message: "You already have a loan" });
-    // }
 
     if (existingLoan) {
       console.log("existingLoan called --->", existingLoan);
@@ -41,7 +35,7 @@ const createLoan = async (req, res) => {
     const template = "newLoan";
     const name = user.name;
 
-    await sendEmail(subject, send_to, sent_from, reply_to, template, name);
+    // await sendEmail(subject, send_to, sent_from, reply_to, template, name);
 
     // Send email to admin.
 
@@ -51,7 +45,7 @@ const createLoan = async (req, res) => {
     const reply_to1 = "";
     const template1 = "newLoanForAdmin";
 
-    await sendEmail(subject1, send_to1, sent_from1, reply_to1, template1);
+    // await sendEmail(subject1, send_to1, sent_from1, reply_to1, template1);
     const newLoan = await loan.save();
     console.log(`newLoan>>>>>>>${newLoan}`);
     res.status(201).json(newLoan);
@@ -115,30 +109,39 @@ const deleteLoan = async (req, res) => {
 const changeLoanStatus = async (req, res) => {
   try {
     console.log(`"REQ BODY>>>>${JSON.stringify(req.body)}`);
-    const { userId, loanId, loanAmount, loanStatus } = req.body;
-    const loan = await Loan.findById(loanId);
+    const { userId, id, amount, status, remarks, email, name } = req.body;
+    const loan = await Loan.findById(id);
     console.log("LOANNNNNN >>>>>>>>>", JSON.stringify(loan));
-    if (loanStatus === "Approved") {
+    if (loan.status === "Approved" && status === "Approved") {
+      return res.status(400).json({
+        message: "You have already approved the request.",
+      });
+    }
+    if (status === "Approved") {
       const totalLoanProvidedByCompany = await Constant.find({
         key: "totalDisbursementAmount",
       });
+      console.log(`totalLoanProvidedByCompany>>${totalLoanProvidedByCompany}`);
+      console.log(`loanAmount>>>${amount}`);
       const totalLoanOfCompany = totalLoanProvidedByCompany[0]?.value;
-      if (totalLoanOfCompany >= loanAmount) {
+      if (totalLoanOfCompany >= amount) {
         if (loan) {
-          loan.status = loanStatus;
-          const filter = { id: loanId };
+          loan.status = status;
+          const filter = { _id: ObjectId(id) };
           const updateDoc = {
             $set: {
-              status: loanStatus,
+              status: status,
             },
           };
+          console.log(`updated loan${JSON.stringify(loan)}`);
           await Loan.updateOne(filter, updateDoc);
-          const newRemainingCompanyLoan = totalLoanOfCompany - loanAmount;
+          const newRemainingCompanyLoan = totalLoanOfCompany - amount;
           // update Constant value
           await Constant.findOneAndUpdate({
             key: "totalDisbursementAmount",
             value: newRemainingCompanyLoan.toString(),
           });
+          // sendStatusEmail(loan.status, email, name, remarks);
           return res
             .status(200)
             .json({ message: "Loan approved successfully." });
@@ -150,15 +153,19 @@ const changeLoanStatus = async (req, res) => {
       }
     } else {
       if (loan) {
-        loan.status = loanStatus;
-        const filter = { id: loanId };
+        console.log(`remarks>>>${remarks}`);
+        loan.status = status;
+        const filter = { _id: id };
         const updateDoc = {
           $set: {
-            status: loanStatus,
+            status: status,
+            remarks: status === "Rejected" ? remarks : "",
           },
         };
+
         await Loan.updateOne(filter, updateDoc);
-        let message = "Loan $loanStatus successfully.";
+        // sendStatusEmail(loan.status, email, name, remarks);
+        let message = `Loan ${status} successfully.`;
         return res.status(200).json({ message: message });
       }
     }
@@ -167,6 +174,46 @@ const changeLoanStatus = async (req, res) => {
   }
 };
 
+const sendStatusEmail = async (loanStatus, email, name, remarks) => {
+  console.log(`Emaillkkkllkl${email}`);
+  const subject = "Loan status update- Fin Investments Inc.";
+  const send_to = email;
+  const sent_from = process.env.EMAIL_USER;
+  const reply_to = "noreply@fininvestmentsinc.com";
+  const template = "loanApproved";
+  const userName = name;
+  const status = loanStatus;
+  var msg = "";
+
+  console.log(`status>>>>>${status}`);
+  if (status === "Approved") {
+    msg =
+      "We are pleased to inform you that your loan application has been approved";
+  } else if (status === "Rejected") {
+    msg = `Unfortunately, you loan has been rejected. The reason of rejection is: ${remarks}`;
+  } else if (status === "Cancelled") {
+    msg = "Your loan has been cancelled upon your request.";
+  } else {
+    msg = "Test";
+  }
+
+  try {
+    await sendEmail(
+      subject,
+      send_to,
+      sent_from,
+      reply_to,
+      template,
+      userName,
+      status,
+      msg
+    );
+    // res.status(200).json({ message: "Loan status Email Sent" });
+  } catch (error) {
+    res.status(500);
+    throw new Error("Email not sent, please try again");
+  }
+};
 module.exports = {
   createLoan,
   getAllLoans,
@@ -174,4 +221,5 @@ module.exports = {
   updateLoan,
   deleteLoan,
   changeLoanStatus,
+  sendStatusEmail,
 };
