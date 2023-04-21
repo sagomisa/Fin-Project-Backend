@@ -141,7 +141,7 @@ const changeLoanStatus = async (req, res) => {
             key: "totalDisbursementAmount",
             value: newRemainingCompanyLoan.toString(),
           });
-          // sendStatusEmail(loan.status, email, name, remarks);
+          sendStatusEmail(loan.status, email, name, remarks);
           return res
             .status(200)
             .json({ message: "Loan approved successfully." });
@@ -164,7 +164,21 @@ const changeLoanStatus = async (req, res) => {
         };
 
         await Loan.updateOne(filter, updateDoc);
-        // sendStatusEmail(loan.status, email, name, remarks);
+        try {
+          var emailResponse = await sendStatusEmail(
+            loan.status,
+            email,
+            name,
+            remarks
+          );
+          if (emailResponse) {
+            return res
+              .status(200)
+              .json({ message: "Loan status Email sent successfully." });
+          }
+        } catch (error) {
+          return res.status(500).json({ message: "Error sending email." });
+        }
         let message = `Loan ${status} successfully.`;
         return res.status(200).json({ message: message });
       }
@@ -182,21 +196,21 @@ const sendStatusEmail = async (loanStatus, email, name, remarks) => {
   const reply_to = "noreply@fininvestmentsinc.com";
   const template = "loanApproved";
   const userName = name;
-  const status = loanStatus;
+  const loanStat = loanStatus;
   var msg = "";
 
-  console.log(`status>>>>>${status}`);
-  if (status === "Approved") {
+  console.log(`status>>>>>${loanStat}`);
+  if (loanStat === "Approved") {
     msg =
       "We are pleased to inform you that your loan application has been approved";
-  } else if (status === "Rejected") {
+  } else if (loanStat === "Rejected") {
     msg = `Unfortunately, you loan has been rejected. The reason of rejection is: ${remarks}`;
-  } else if (status === "Cancelled") {
+  } else if (loanStat === "Cancelled") {
     msg = "Your loan has been cancelled upon your request.";
   } else {
     msg = "Test";
   }
-
+  console.log(`messagege>>>>${msg}`);
   try {
     await sendEmail(
       subject,
@@ -205,13 +219,12 @@ const sendStatusEmail = async (loanStatus, email, name, remarks) => {
       reply_to,
       template,
       userName,
-      status,
+      loanStat,
       msg
     );
-    // res.status(200).json({ message: "Loan status Email Sent" });
+    return true;
   } catch (error) {
-    res.status(500);
-    throw new Error("Email not sent, please try again");
+    return false;
   }
 };
 module.exports = {

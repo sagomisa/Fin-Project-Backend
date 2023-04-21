@@ -9,7 +9,10 @@ const sendEmail = async (
   reply_to,
   template,
   name,
-  link
+  link,
+  msg,
+  remarks,
+  loanStat
 ) => {
   // Create Email Transporter
 
@@ -48,6 +51,9 @@ const sendEmail = async (
     context: {
       name,
       link,
+      msg,
+      remarks,
+      loanStat,
     },
   };
 
