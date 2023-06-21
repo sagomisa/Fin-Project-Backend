@@ -18,7 +18,7 @@ const createLoan = async (req, res) => {
 
     if (existingLoan) {
       console.log("existingLoan called --->", existingLoan);
-      return res.status(200).json({ message: "You already have a loan" });
+      return res.status(400).json({ message: "You already have a loan" });
     }
 
     const loan = new Loan({
@@ -57,7 +57,10 @@ const createLoan = async (req, res) => {
 // Retrieve and return all loans from the database.
 const getAllLoans = async (req, res) => {
   try {
-    const loans = await Loan.find({});
+    const loans = await Loan.find({})
+    .populate('user', 'name email')
+    .populate('approved_by', 'name email')
+    .populate('disbursed_by', 'name email')
     res.status(200).json(loans);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -105,91 +108,145 @@ const deleteLoan = async (req, res) => {
   }
 };
 
-// Change Loan Status
-const changeLoanStatus = async (req, res) => {
-  try {
-    console.log(`"REQ BODY>>>>${JSON.stringify(req.body)}`);
-    const { userId, id, amount, status, remarks, email, name } = req.body;
-    const loan = await Loan.findById(id);
-    console.log("LOANNNNNN >>>>>>>>>", JSON.stringify(loan));
-    if (loan.status === "Approved" && status === "Approved") {
-      return res.status(400).json({
-        message: "You have already approved the request.",
-      });
-    }
-    if (status === "Approved") {
-      const totalLoanProvidedByCompany = await Constant.find({
-        key: "totalDisbursementAmount",
-      });
-      console.log(`totalLoanProvidedByCompany>>${totalLoanProvidedByCompany}`);
-      console.log(`loanAmount>>>${amount}`);
-      const totalLoanOfCompany = totalLoanProvidedByCompany[0]?.value;
-      if (totalLoanOfCompany >= amount) {
-        if (loan) {
-          loan.status = status;
-          const filter = { _id: ObjectId(id) };
-          const updateDoc = {
-            $set: {
-              status: status,
-            },
-          };
-          console.log(`updated loan${JSON.stringify(loan)}`);
-          await Loan.updateOne(filter, updateDoc);
-          const newRemainingCompanyLoan = totalLoanOfCompany - amount;
-          // update Constant value
-          await Constant.findOneAndUpdate({
-            key: "totalDisbursementAmount",
-            value: newRemainingCompanyLoan.toString(),
-          });
-          sendStatusEmail(loan.status, email, name, remarks);
-          return res
-            .status(200)
-            .json({ message: "Loan approved successfully." });
-        }
-      } else {
+// Update loan status
+const updateLoanStatus = async (req, res) => {
+  const { userId, id, amount, status, remarks, email, name } = req.body;
+
+
+  // Validate the provided status value
+  const validStatuses = ["approved", "pending", "rejected", "cancelled", "disbursed"];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({ message: 'Invalid status value' });
+  }
+  const totalLoanProvidedByCompany = await Constant.findOne({
+    key: "totalDisbursementAmount",
+  });
+
+  // Retrieve the loan by loanId
+  Loan.findById(id)
+    .then(loan => {
+      console.log(loan)
+      if (!loan) {
+        return res.status(404).json({ message: 'Loan not found.' });
+      }
+      if (loan.status === status) {
         return res.status(400).json({
-          message: "Cannot process the request with the given amount.",
+          message: `Loan status is already ${status}.`,
         });
       }
-    } else {
-      if (loan) {
-        console.log(`remarks>>>${remarks}`);
-        loan.status = status;
-        const filter = { _id: id };
-        const updateDoc = {
-          $set: {
-            status: status,
-            remarks: status === "Rejected" ? remarks : "",
-          },
-        };
+      
+      if (loan.status === 'disbursed') {
+        // Prevent update if loan is already disbursed
+        return res.status(400).json({ message: 'Cannot update a loan that is already disbursed!' });
+      }
 
-        await Loan.updateOne(filter, updateDoc);
-        try {
-          var emailResponse = await sendStatusEmail(
+      if(status === 'approved' &&  totalLoanProvidedByCompany.value < loan.amount){
+        return res.status(500).json({ message: 'Error! Not Enough disbursment amount available.' });
+      }
+
+      if (status === 'disbursed' && loan.status !== 'approved')
+        return res.status(500).json({ message: 'Only approved loan can be disbursed!' });
+
+      const prevStatus = loan.status;
+      // Update the loan object
+      loan.status = status;
+      loan.remarks = remarks || "";
+      loan.current_user = req.user
+      loan.save()
+        .then(updatedLoan => {
+          console.log(prevStatus +" => " + status)
+          if(status === 'approved' && prevStatus !== 'approved'){
+            totalLoanProvidedByCompany.value = totalLoanProvidedByCompany.value - loan.amount;
+            totalLoanProvidedByCompany.save((err, updatedRecord) => {
+              console.log(updatedRecord)
+              if (err) {
+                console.error(err);
+              }
+            })
+          }
+          if(['pending', 'cancelled', 'rejected'].includes(status) && prevStatus === 'approved'){
+            totalLoanProvidedByCompany.value = totalLoanProvidedByCompany.value + loan.amount;
+            totalLoanProvidedByCompany.save((err, updatedRecord) => {
+              console.log(updatedRecord)
+              if (err) {
+                console.error(err);
+              }
+            })
+          }
+          sendStatusEmail(
             loan.status,
             email,
             name,
             remarks
           );
-          if (emailResponse) {
-            return res
-              .status(200)
-              .json({ message: "Loan status Email sent successfully." });
-          }
-        } catch (error) {
-          return res.status(500).json({ message: "Error sending email." });
-        }
-        let message = `Loan ${status} successfully.`;
-        return res.status(200).json({ message: message });
-      }
+          return res.status(200).json({ message: "Loan updated successfully" });
+        })
+        .catch(error => {
+          res.status(500).json({ message: 'An error occurred while updating the loan.' });
+        });
+    })
+    .catch(error => {
+      res.status(500).json({ message: 'An error occurred while retrieving the loan.' });
+    });
+};
+
+// Retrieve and return current user loan.
+const getUserLoan = async (req, res) => {
+  try {
+    const loan = await Loan.findOne({ user: req.user })
+    .populate('user', 'name email')
+
+    res.status(200).json(loan);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// Cancel loan for user
+const cancelLoan = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const loan = await Loan.findById(id).populate('user', '_id name email')
+    .populate('approved_by', 'name email')
+    .populate('disbursed_by', 'name email')
+    const prevStatus = loan.status;
+
+    if(!loan){
+      return res.status(404).json({ message: 'Loan not found.' });
     }
+    if (loan.status === 'disbursed') {
+      // Prevent update if loan is already disbursed
+      return res.status(400).json({ message: 'Cannot update a loan that is already disbursed!' });
+    }
+    if(req.user._id.toString() !== loan.user._id.toString()){
+      return res.status(400).json({ message: 'Error! Unauthorized access' });
+    }
+    loan.status = "cancelled";
+    loan.remarks = "cancelled by User";
+    loan.save().then(updatedLoan => {
+      if(prevStatus === 'approved'){
+        Constant.findOne({
+          key: "totalDisbursementAmount",
+        }).then((totalLoanProvidedByCompany)=>{
+          totalLoanProvidedByCompany.value = totalLoanProvidedByCompany.value + loan.amount;
+          totalLoanProvidedByCompany.save((err, updatedRecord) => {
+            console.log(updatedRecord)
+            if (err) {
+              console.error(err);
+            }
+          })
+        })
+      }
+      res.status(200).json(updatedLoan);
+    }).catch(error => {
+      res.status(500).json({ message: 'An error occurred while updating the loan.' });
+    });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 };
 
 const sendStatusEmail = async (loanStatus, email, name, remarks) => {
-  console.log(`Emaillkkkllkl${email}`);
   const subject = "Loan status update- Fin Investments Inc.";
   const send_to = email;
   const sent_from = process.env.EMAIL_USER;
@@ -200,15 +257,22 @@ const sendStatusEmail = async (loanStatus, email, name, remarks) => {
   var msg = "";
 
   console.log(`status>>>>>${loanStat}`);
-  if (loanStat === "Approved") {
+  if (loanStat === "approved") {
     msg =
       "We are pleased to inform you that your loan application has been approved";
-  } else if (loanStat === "Rejected") {
+  } else if (loanStat === "rejected") {
     msg = `Unfortunately, you loan has been rejected. The reason of rejection is: ${remarks}`;
-  } else if (loanStat === "Cancelled") {
+  } else if (loanStat === "cancelled") {
     msg = "Your loan has been cancelled upon your request.";
-  } else {
-    msg = "Test";
+  } 
+  else if (loanStat === "disbursed") {
+    msg = "Your loan has been disbursed Successfully.";
+  }
+  else if (loanStat === "pending") {
+    msg = "Your loan is pending and yet to be approved.";
+  }
+  else {
+    msg = "You loan status is updated";
   }
   console.log(`messagege>>>>${msg}`);
   try {
@@ -233,6 +297,8 @@ module.exports = {
   getLoanById,
   updateLoan,
   deleteLoan,
-  changeLoanStatus,
+  updateLoanStatus,
   sendStatusEmail,
+  getUserLoan,
+  cancelLoan
 };
