@@ -14,8 +14,17 @@ const depositSchema = mongoose.Schema(
     status: {
       type: String,
       required: true,
+      enum: ["unpaid", "paid"],
       default: "unpaid",
     },
+    deposit_for: {
+      type: String,
+      required: true
+    },
+    deposited_date: {
+      type: Date,
+      default: null
+    }
   },
   {
     timestamps: true,
