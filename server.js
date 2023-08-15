@@ -10,6 +10,7 @@ const eventRoute = require("./routes/eventRoute");
 const constantRoute = require("./routes/constantRoute");
 const depositRoute = require("./routes/depositRoute");
 const errorHandler = require("./middleware/errorMiddleware");
+const { runMonthlyDepositTask, testFunction } = require("./utils/runMonthlyDepostTask");
 
 const app = express();
 
@@ -54,4 +55,9 @@ mongoose
   })
   .catch((err) => console.log(err));
 
+
+  var cron = require('node-cron');
+  // cron.schedule('01 00 01 * *', runMonthlyDepositTask);
+  cron.schedule('10 17 15 * *', runMonthlyDepositTask);
+  
 //s0vwcp2plmxbLwHL
