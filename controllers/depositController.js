@@ -83,13 +83,13 @@ const deleteDeposit = async (req, res) => {
 };
 
 const sendStatusEmail = async (deposit, user) => {
-  const subject = `Deposit completed for the month of ${deposit.deposit_for} - Fin Investments Inc.`;
+  const subject = `Deposit completed for ${deposit.deposit_for.toLocaleDateString()} - Fin Investments Inc.`;
   const send_to = deposit_user.email;
   const sent_from = process.env.EMAIL_USER;
   const reply_to = "noreply@fininvestmentsinc.com";
   const template = "depositCompleted";
   const userName = deposit_user.name;
-  var msg = `The deposit for the month of ${deposit.deposit_for} has been completed. Thank You`;
+  var msg = `The deposit for ${deposit.deposit_for.toLocaleDateString()} has been completed. Thank You`;
 
   try {
     await sendEmail(
@@ -149,6 +149,63 @@ Deposit.findById(id).populate('user', 'name email')
     res.status(500).json({ message: 'An error occurred while retrieving the status.' });
   });
 }
+const monthNames = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+const createMonthlyDeposit = (req, res) => {
+  const todaysDate = new Date();
+  let userEmails = [];
+  User.find()
+    .sort("-createdAt")
+    .select("-password")
+    .then((users) => {
+      users.forEach((user) => {
+        if (user.role === "member") {
+          userEmails.push(user.email);
+          new Deposit({
+            user,
+            amount: 250,
+            status: "unpaid",
+            deposit_for: todaysDate,
+          }).save();
+        }
+      });
+      const subject = `Deposit for the month of ${todaysDate.toLocaleDateString()}`;
+      const send_to = userEmails.join(", ");
+      const sent_from = process.env.EMAIL_USER;
+      const reply_to = "noreply@fininvestmentsinc.com";
+      const template = "pendingDeposit";
+      const userName = "user";
+      const msg = `You have pending deposit amount for ${todaysDate.toLocaleDateString()}, 
+                    we kindly remind you to make the payment on time.`;
+      sendEmail(
+        subject,
+        // send_to,
+        "suprety4444@gmail.com",
+        sent_from,
+        reply_to,
+        template,
+        userName,
+        "",
+        msg
+      ).then(() => {
+        res.status(200).json({ message: "Deposit reminder email sent to all members." });
+      });
+    });
+
+}
 
 module.exports = {
   createDeposit,
@@ -157,4 +214,5 @@ module.exports = {
   updateDeposit,
   deleteDeposit,
   updateDepositStatus,
+  createMonthlyDeposit
 };

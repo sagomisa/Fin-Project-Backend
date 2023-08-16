@@ -58,6 +58,6 @@ mongoose
 
   var cron = require('node-cron');
   // cron.schedule('01 00 01 * *', runMonthlyDepositTask);
-  cron.schedule('10 17 15 * *', runMonthlyDepositTask);
+  // cron.schedule('10 17 15 * *', runMonthlyDepositTask);
   
 //s0vwcp2plmxbLwHL
