@@ -149,20 +149,6 @@ Deposit.findById(id).populate('user', 'name email')
     res.status(500).json({ message: 'An error occurred while retrieving the status.' });
   });
 }
-const monthNames = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
 
 const createMonthlyDeposit = (req, res) => {
   const todaysDate = new Date();
@@ -192,8 +178,7 @@ const createMonthlyDeposit = (req, res) => {
                     we kindly remind you to make the payment on time.`;
       sendEmail(
         subject,
-        // send_to,
-        "suprety4444@gmail.com",
+        send_to,
         sent_from,
         reply_to,
         template,
