@@ -18,7 +18,7 @@ const depositSchema = mongoose.Schema(
       default: "unpaid",
     },
     deposit_for: {
-      type: String,
+      type: Date,
       required: true
     },
     deposited_date: {

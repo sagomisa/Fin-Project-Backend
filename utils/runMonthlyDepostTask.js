@@ -1,25 +1,11 @@
 const Deposit = require("../models/depositModel");
 const sendEmail = require("../utils/sendEmail");
 const User = require("../models/userModel");
-const monthNames = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
 
 const runMonthlyDepositTask = () => {
-  const currentMonthIndex = new Date().getMonth();
+  const todaysDate = new Date();
   let userEmails = [];
-  const users = User.find()
+  User.find()
     .sort("-createdAt")
     .select("-password")
     .then((users) => {
@@ -30,17 +16,17 @@ const runMonthlyDepositTask = () => {
             user,
             amount: 250,
             status: "unpaid",
-            deposit_for: monthNames[currentMonthIndex],
+            deposit_for: todaysDate,
           }).save();
         }
       });
-      const subject = `Deposit for the month of ${monthNames[currentMonthIndex]}`;
+      const subject = `Deposit for the month of ${todaysDate.toLocaleDateString()}`;
       const send_to = userEmails.join(", ");
       const sent_from = process.env.EMAIL_USER;
       const reply_to = "noreply@fininvestmentsinc.com";
       const template = "pendingDeposit";
       const userName = "user";
-      const msg = `You have pending deposit amount for the month of ${monthNames[currentMonthIndex]}, 
+      const msg = `You have pending deposit amount for ${todaysDate.toLocaleDateString()}, 
                     we kindly remind you to make the payment on time.`;
       sendEmail(
         subject,
@@ -52,10 +38,10 @@ const runMonthlyDepositTask = () => {
         "",
         msg
       ).then(() => {
-        console.log("Deposit remider email sent to all members.");
+        console.log("Deposit reminder email sent to all members.");
       });
     });
-};
+  };
 const testFunction = () => {
   console.log("This is test to check node cron in production.");
 };

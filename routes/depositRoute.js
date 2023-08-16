@@ -10,7 +10,8 @@ const {
   getDepositById,
   updateDeposit,
   deleteDeposit,
-  updateDepositStatus
+  updateDepositStatus,
+  createMonthlyDeposit
 } = require("../controllers/depositController");
 
 router.post("/createDeposit", createDeposit);
@@ -19,5 +20,6 @@ router.get("/getDepositById/:id", protect, getDepositById);
 router.put("/updateDeposit/:id", protect, updateDeposit);
 router.patch("/upgradeDepositStatus", protect, adminOnly, updateDepositStatus);
 router.delete("/deleteDeposit/:id", protect, deleteDeposit);
+router.post("/createMonthlyDeposit", createMonthlyDeposit);
 
 module.exports = router;
