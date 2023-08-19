@@ -31,10 +31,6 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new Error("Email already in use.");
   }
 
-  // Get UserAgent
-  // const ua = parser(req.headers["user-agent"]);
-  // const userAgent = [ua.ua];
-
   //   Create new user
   const user = await User.create({
     name,
@@ -42,32 +38,51 @@ const registerUser = asyncHandler(async (req, res) => {
     password,
     // userAgent,
   });
-
-  // Generate Token
-  const token = generateToken(user._id);
-
-  // Send HTTP-only cookie
-  res.cookie("token", token, {
-    path: "/",
-    httpOnly: true,
-    expires: new Date(Date.now() + 1000 * 86400), // 1 day
-    sameSite: "none",
-    secure: true,
-  });
+  
 
   if (user) {
-    const { _id, name, email, phone, bio, photo, role, isVerified } = user;
+    const { _id, name } = user;
+    const verificationToken = crypto.randomBytes(32).toString("hex") + user._id;
+  console.log(verificationToken);
 
-    res.status(201).json({
-      _id,
+  // Hash token and save
+  const hashedToken = hashToken(verificationToken);
+  await new Token({
+    userId: user._id,
+    vToken: hashedToken,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + 60 * (60 * 1000), // 60mins
+  }).save();
+
+  // Construct Verification URL
+  const verificationUrl = `${process.env.FRONTEND_URL}/verify/${verificationToken}`;
+
+  // Send Email
+  const subject = "Verify Your Account - FIN Investments Inc.";
+  const send_to = user.email;
+  const sent_from = process.env.EMAIL_USER;
+  const reply_to = "noreply@fininvestmentsinc.com";
+  const template = "verifyEmail";
+  const link = verificationUrl;
+
+  try {
+    await sendEmail(
+      subject,
+      send_to,
+      sent_from,
+      reply_to,
+      template,
       name,
-      email,
-      phone,
-      bio,
-      photo,
-      role,
-      isVerified,
-      token,
+      link
+    );
+    res.status(200).json({ message: "User created and Verification Email Sent" });
+  } catch (error) {
+    res.status(500);
+    throw new Error("User created but Email not sent");
+  }
+  
+    res.status(201).json({
+      _id
     });
   } else {
     res.status(400);
