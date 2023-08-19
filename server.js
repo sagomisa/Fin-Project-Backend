@@ -9,6 +9,7 @@ const loanRoute = require("./routes/loanRoute");
 const eventRoute = require("./routes/eventRoute");
 const constantRoute = require("./routes/constantRoute");
 const depositRoute = require("./routes/depositRoute");
+const blogRoute = require("./routes/blogRoute");
 const errorHandler = require("./middleware/errorMiddleware");
 
 const app = express();
@@ -36,6 +37,7 @@ app.use("/api/loans", loanRoute);
 app.use("/api/events", eventRoute);
 app.use("/api/constants", constantRoute);
 app.use("/api/deposits", depositRoute);
+app.use("/api/blogs", blogRoute);
 
 app.get("/", (req, res) => {
   res.send("Home Page");
