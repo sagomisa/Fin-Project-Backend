@@ -13,12 +13,12 @@ const createLoan = async (req, res) => {
     const user = await User.findById(id);
 
     // Check if user has an existing loan
-    const existingLoan = await Loan.findOne({ user: id });
+    const existingLoan = await Loan.findOne({ user: id, status: { $in: ['pending', 'approved'] } });
     console.log(`existingLoan>>>>${existingLoan}`);
 
     if (existingLoan) {
       console.log("existingLoan called --->", existingLoan);
-      return res.status(400).json({ message: "You already have a loan" });
+      return res.status(400).json({ message: "You already have a loan in process" });
     }
 
     const loan = new Loan({
@@ -155,17 +155,8 @@ const updateLoanStatus = async (req, res) => {
       loan.save()
         .then(updatedLoan => {
           console.log(prevStatus +" => " + status)
-          if(status === 'approved' && prevStatus !== 'approved'){
+          if(status === 'disbursed' && prevStatus !== 'disbursed'){
             totalLoanProvidedByCompany.value = totalLoanProvidedByCompany.value - loan.amount;
-            totalLoanProvidedByCompany.save((err, updatedRecord) => {
-              console.log(updatedRecord)
-              if (err) {
-                console.error(err);
-              }
-            })
-          }
-          if(['pending', 'cancelled', 'rejected'].includes(status) && prevStatus === 'approved'){
-            totalLoanProvidedByCompany.value = totalLoanProvidedByCompany.value + loan.amount;
             totalLoanProvidedByCompany.save((err, updatedRecord) => {
               console.log(updatedRecord)
               if (err) {
@@ -193,10 +184,11 @@ const updateLoanStatus = async (req, res) => {
 // Retrieve and return current user loan.
 const getUserLoan = async (req, res) => {
   try {
-    const loan = await Loan.findOne({ user: req.user })
+    const loans = await Loan.find({ user: req.user })
     .populate('user', 'name email')
+    .sort({createdAt: -1});
 
-    res.status(200).json(loan);
+    res.status(200).json(loans);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }

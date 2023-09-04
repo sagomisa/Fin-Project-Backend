@@ -51,16 +51,15 @@ loanSchema.pre('save', function (next) {
   if(!this.isNew && this.isModified('status')){
     console.log("Original >>>>>>>.. "+this.status)
     next();
-    console.log(this.current_user)
     if (
       (this.status === 'approved')
     ) {
       this.approved_date = new Date();
-      this.approved_by = this.user
+      this.approved_by = this.current_user
     }
     else if(this.status === 'disbursed'){
       this.disbursed_date = new Date();
-      this.disbursed_by = this.user
+      this.disbursed_by = this.current_user
     }
     else if(['pending', 'cancelled', 'rejected'].includes(this.status)){
       this.approved_date = null
@@ -68,10 +67,6 @@ loanSchema.pre('save', function (next) {
     }
     next();
   }
-  // console.log("HEYYYY")
-  // console.log(this)
- 
-
   next();
 });
 
