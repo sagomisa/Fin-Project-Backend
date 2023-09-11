@@ -10,6 +10,7 @@ const eventRoute = require("./routes/eventRoute");
 const constantRoute = require("./routes/constantRoute");
 const depositRoute = require("./routes/depositRoute");
 const blogRoute = require("./routes/blogRoute");
+const galleryImageRoute = require("./routes/galleryImageRoute");
 const errorHandler = require("./middleware/errorMiddleware");
 
 const app = express();
@@ -38,6 +39,7 @@ app.use("/api/events", eventRoute);
 app.use("/api/constants", constantRoute);
 app.use("/api/deposits", depositRoute);
 app.use("/api/blogs", blogRoute);
+app.use("/api/galleryImages", galleryImageRoute);
 
 app.get("/", (req, res) => {
   res.send("Home Page");
